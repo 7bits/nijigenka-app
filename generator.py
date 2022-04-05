@@ -18,7 +18,10 @@ class Generator(object):
     ) -> None:
         self.input_name = 'input_0'
         self.output_name = 'output_0'
-        self.session = onnxruntime.InferenceSession(model_path, None)
+        opts = onnxruntime.SessionOptions()
+        opts.intra_op_num_threads = 8
+        self.session = onnxruntime.InferenceSession(
+            model_path, sess_options=opts)
 
     def predict(self, x: np.ndarray) -> PIL.Image.Image:
         x = np.expand_dims(x, 0)
