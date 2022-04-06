@@ -1,8 +1,9 @@
 import argparse
+from cProfile import label
 import functools
 import pathlib
 import os
-from typing import Dict
+from typing import Dict, List, Optional, Tuple
 import gradio as gr
 import PIL.Image
 from encoder import Encoder
@@ -44,8 +45,12 @@ def predict(
     face_aligner: FaceAligner,
     encoder: Encoder,
     generator: Dict[str, Generator],
-):
+) -> Tuple[List[PIL.Image.Image], Optional[str]]:
     images = face_aligner.align(image)
+    if len(images) == 0:
+        error_msg = "Cannot find any face in photo"
+        # gradio doesn't support empty list for images carusel, so we create dummy img
+        return [PIL.Image.new('RGB', (1, 1))], error_msg
 
     results = []
     for img in images:
@@ -54,7 +59,7 @@ def predict(
         result = join_image_h(img, gen_img)
         results.append(result)
 
-    return results
+    return results, None
 
 
 def get_model_path(repo_id: str, filename: str):
@@ -126,7 +131,10 @@ def main():
                 label='Style',
             ),
         ],
-        outputs=gr.outputs.Carousel(['image']),
+        outputs=[
+            gr.outputs.Carousel(['image'], label='Result'),
+            gr.outputs.Textbox(type="auto", label='Error'),
+        ],
         examples=load_examples(),
         title='Nijigenka: Portrait to Art',
         allow_flagging='never',
