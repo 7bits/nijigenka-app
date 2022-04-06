@@ -1,6 +1,8 @@
 import argparse
 import functools
 import pathlib
+import os
+from typing import Dict
 import gradio as gr
 import PIL.Image
 from encoder import Encoder
@@ -14,6 +16,8 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument('--share', action='store_true')
     parser.add_argument('--port', type=int)
+    parser.add_argument('--models_repo_id', type=str,
+                        default='senior-sigan/nijigenka')
     parser.add_argument('--disable-queue',
                         dest='enable_queue',
                         action='store_false')
@@ -23,37 +27,62 @@ def parse_args() -> argparse.Namespace:
 def load_examples():
     image_dir = pathlib.Path('examples')
     images = sorted(image_dir.glob('*.jpg'))
-    return [path.as_posix() for path in images]
+    return [[path.as_posix(), 'art'] for path in images]
+
+
+def join_image_h(im1: PIL.Image.Image, im2: PIL.Image.Image) -> PIL.Image.Image:
+    im1 = im1.resize(im2.size)
+    dst = PIL.Image.new('RGB', (im1.width + im2.width, im1.height))
+    dst.paste(im1, (0, 0))
+    dst.paste(im2, (im1.width, 0))
+    return dst
 
 
 def predict(
     image: PIL.Image.Image,
+    style: str,
     face_aligner: FaceAligner,
     encoder: Encoder,
-    generator: Generator,
+    generator: Dict[str, Generator],
 ):
     images = face_aligner.align(image)
 
-    gen_imgs = []
+    results = []
     for img in images:
         x = encoder.predict(img)
-        gen_img = generator.predict(x)
-        gen_imgs.append(gen_img)
+        gen_img = generator[style].predict(x)
+        result = join_image_h(img, gen_img)
+        results.append(result)
 
-    return gen_imgs
+    return results
 
 
-def load_models():
-    encoder_path = hf_hub_download(
-        'senior-sigan/nijigenka',
+def get_model_path(repo_id: str, filename: str):
+    maybe_path = os.path.join(repo_id, filename)
+    if os.path.exists(maybe_path):
+        return os.path.abspath(maybe_path)
+    else:
+        return hf_hub_download(
+            repo_id,
+            filename,
+        )
+
+
+def load_models(repo_id: str):
+    encoder_path = get_model_path(
+        repo_id,
         'encoder.onnx',
     )
-    generator_path = hf_hub_download(
-        'senior-sigan/nijigenka',
+    generator_art_path = get_model_path(
+        repo_id,
         'face2art.onnx',
     )
-    shape_predictor_path = hf_hub_download(
-        'senior-sigan/nijigenka',
+    generator_anime_path = get_model_path(
+        repo_id,
+        'face2kuvshinov2.onnx',
+    )
+    shape_predictor_path = get_model_path(
+        repo_id,
         'shape_predictor_68_face_landmarks.bin',
     )
 
@@ -62,16 +91,18 @@ def load_models():
         shape_predictor_path=shape_predictor_path,
     )
     encoder = Encoder(model_path=encoder_path)
-    generator = Generator(model_path=generator_path)
+    generator_art = Generator(model_path=generator_art_path)
+    generator_anime = Generator(model_path=generator_anime_path)
 
-    return face_aligner, encoder, generator
+    return face_aligner, encoder, {'art': generator_art, 'anime': generator_anime}
 
 
 def main():
     args = parse_args()
     gr.close_all()
 
-    face_aligner, encoder, generator = load_models()
+    face_aligner, encoder, generator = load_models(args.models_repo_id)
+    generator_types = list(generator.keys())
 
     func = functools.partial(
         predict,
@@ -84,7 +115,16 @@ def main():
     iface = gr.Interface(
         fn=func,
         inputs=[
-            gr.inputs.Image(type='pil', label='Input')
+            gr.inputs.Image(
+                type='pil',
+                label='Real photo with a face',
+            ),
+            gr.inputs.Radio(
+                choices=generator_types,
+                type='value',
+                default=generator_types[0],
+                label='Style',
+            ),
         ],
         outputs=gr.outputs.Carousel(['image']),
         examples=load_examples(),
