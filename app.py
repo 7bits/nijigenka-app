@@ -14,13 +14,8 @@ from huggingface_hub import hf_hub_download
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument('--share', action='store_true')
-    parser.add_argument('--port', type=int)
     parser.add_argument('--models_repo_id', type=str,
                         default='senior-sigan/nijigenka')
-    parser.add_argument('--disable-queue',
-                        dest='enable_queue',
-                        action='store_false')
     return parser.parse_args()
 
 
@@ -141,13 +136,8 @@ def main():
         examples=load_examples(),
         title='Nijigenka: Portrait to Art',
         allow_flagging='never',
-        theme='huggingface',
     )
-    iface.launch(
-        enable_queue=args.enable_queue,
-        server_port=args.port,
-        share=args.share,
-    )
+    iface.queue().launch()
 
 
 if __name__ == '__main__':
