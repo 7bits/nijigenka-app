@@ -22,3 +22,7 @@ Install gradio `pip install gradio==3.17.1`.
 Install other deps: `pip install -r requirements.txt`.
 
 Run application `python app.py --models_repo_id=/path/to/dir/with/models`. You can ommit `--models_repo_id` if you would like to download models from the hugging face hub.
+
+## Models
+
+You can download models from [huggingface.co/senior-sigan/nijigenka](https://huggingface.co/senior-sigan/nijigenka)
