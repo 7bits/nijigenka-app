@@ -1,4 +1,3 @@
-from xml.etree.ElementTree import PI
 import PIL.Image
 import onnxruntime
 import numpy as np

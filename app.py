@@ -1,5 +1,4 @@
 import argparse
-from cProfile import label
 import functools
 import pathlib
 import os
@@ -42,6 +41,7 @@ def join_image_h(im1: PIL.Image.Image, im2: PIL.Image.Image) -> PIL.Image.Image:
 def predict(
     image: PIL.Image.Image,
     style: str,
+    *,
     face_aligner: FaceAligner,
     encoder: Encoder,
     generator: Dict[str, Generator],
@@ -65,6 +65,7 @@ def predict(
 def get_model_path(repo_id: str, filename: str):
     maybe_path = os.path.join(repo_id, filename)
     if os.path.exists(maybe_path):
+        print('Using local models')
         return os.path.abspath(maybe_path)
     else:
         return hf_hub_download(
@@ -120,20 +121,20 @@ def main():
     iface = gr.Interface(
         fn=func,
         inputs=[
-            gr.inputs.Image(
+            gr.Image(
                 type='pil',
                 label='Real photo with a face',
             ),
-            gr.inputs.Radio(
+            gr.Radio(
                 choices=generator_types,
                 type='value',
-                default=generator_types[0],
+                value=generator_types[0],
                 label='Style',
             ),
         ],
         outputs=[
-            gr.outputs.Carousel(['image'], label='Result'),
-            gr.outputs.Textbox(type="auto", label='Error'),
+            gr.Gallery(label='Result'),
+            gr.Textbox(label='Error'),
         ],
         examples=load_examples(),
         title='Nijigenka: Portrait to Art',

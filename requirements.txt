@@ -1,6 +1,9 @@
-huggingface-hub==0.4.0
-pillow==8.4.0
-numpy==1.21.4
-onnxruntime==1.10.0
-dlib==19.23.1
-scipy==1.7.3
+huggingface-hub==0.12.0
+pillow==9.4.0
+numpy==1.24.1
+onnxruntime==1.13.1
+dlib==19.24.0
+scipy==1.10.0
+
+# for local dev
+# gradio==3.17.1
