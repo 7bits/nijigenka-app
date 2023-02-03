@@ -41,11 +41,13 @@ def join_image_h(im1: PIL.Image.Image, im2: PIL.Image.Image) -> PIL.Image.Image:
 def predict(
     image: PIL.Image.Image,
     style: str,
+    progress = gr.Progress(),
     *,
     face_aligner: FaceAligner,
     encoder: Encoder,
     generator: Dict[str, Generator],
 ) -> Tuple[List[PIL.Image.Image], Optional[str]]:
+    progress(0, desc="Starting...")
     images = face_aligner.align(image)
     if len(images) == 0:
         error_msg = "Cannot find any face in photo"
@@ -53,7 +55,7 @@ def predict(
         return [PIL.Image.new('RGB', (1, 1))], error_msg
 
     results = []
-    for img in images:
+    for img in progress.tqdm(images):
         x = encoder.predict(img)
         gen_img = generator[style].predict(x)
         result = join_image_h(img, gen_img)
